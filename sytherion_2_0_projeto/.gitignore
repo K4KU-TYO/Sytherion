@@ -1,0 +1,7 @@
+sytherion_data/
+__pycache__/
+*.pyc
+.venv/
+venv/
+iniciar.sh
+iniciar.bat

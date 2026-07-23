@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sytherion 2.0 — Ecossistema de IAs em Cibersegurança</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   SYTHERION 2.0 — Design Tokens
+   ========================================================================== */
+:root{
+  --bg-void:#07100d;
+  --bg-panel:#0c1613;
+  --bg-elevated:#121e19;
+  --bg-elevated-2:#16241e;
+  --border:#1d2c26;
+  --border-soft:#16211c;
+  --accent:#35ffa0;
+  --accent-dim:#1f8f5e;
+  --accent-soft:rgba(53,255,160,.12);
+  --text-primary:#eaf4ee;
+  --text-muted:#7f9689;
+  --text-faint:#4d5f56;
+  --danger:#ff5f6d;
+  --danger-soft:rgba(255,95,109,.12);
+  --font-mono:'JetBrains Mono', ui-monospace, monospace;
+  --font-body:'Inter', system-ui, -apple-system, sans-serif;
+  --radius:10px;
+  --radius-sm:6px;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{
+  background:var(--bg-void);
+  color:var(--text-primary);
+  font-family:var(--font-body);
+  overflow:hidden;
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(53,255,160,.05), transparent 40%),
+    radial-gradient(circle at 85% 100%, rgba(77,217,255,.04), transparent 45%);
+}
+::selection{background:var(--accent-soft); color:var(--accent);}
+::-webkit-scrollbar{width:11px; height:11px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--text-muted); border-radius:20px; border:3px solid var(--bg-void); background-clip:padding-box;}
+::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+html{scrollbar-width:thin; scrollbar-color:var(--text-muted) transparent;}
+button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit;}
+button:focus-visible, textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+.app{display:grid; grid-template-columns:280px 1fr; height:100vh;}
+
+/* ============================== SIDEBAR ==================================== */
+.sidebar{background:var(--bg-panel); border-right:1px solid var(--border); display:flex; flex-direction:column; min-width:0;}
+.sidebar-header{padding:16px 14px 10px; display:flex; flex-direction:column; gap:12px;}
+.brand{display:flex; align-items:center; gap:9px; font-family:var(--font-mono); font-weight:700; letter-spacing:.5px; font-size:14.5px; padding:2px 2px 4px;}
+.brand .dot{width:9px; height:9px; border-radius:50%; background:var(--accent); box-shadow:0 0 10px var(--accent), 0 0 2px var(--accent); flex-shrink:0;}
+.brand .dot.offline{background:var(--danger); box-shadow:0 0 10px var(--danger);}
+.brand span.ver{color:var(--text-faint); font-weight:500;}
+
+.btn-novo-chat{display:flex; align-items:center; gap:9px; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-elevated); color:var(--text-primary); font-size:13.5px; font-family:var(--font-mono); transition:border-color .15s, background .15s;}
+.btn-novo-chat:hover{border-color:var(--accent-dim); background:var(--bg-elevated-2);}
+.btn-novo-chat svg{flex-shrink:0; stroke:var(--accent);}
+
+.chat-list{flex:1; overflow-y:auto; padding:8px 10px; display:flex; flex-direction:column; gap:3px;}
+.chat-list-label{font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-faint); padding:12px 8px 6px;}
+.chat-item{display:flex; align-items:center; gap:8px; padding:9px 9px; border-radius:var(--radius-sm); color:var(--text-muted); font-size:13.2px; position:relative; cursor:pointer; border:1px solid transparent; transition:background .12s, color .12s;}
+.chat-item:hover{background:var(--bg-elevated); color:var(--text-primary);}
+.chat-item.ativo{background:var(--accent-soft); color:var(--accent); border-color:rgba(53,255,160,.18);}
+.chat-item .titulo{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.chat-item .acoes{display:flex; gap:2px; flex-shrink:0; opacity:0; transition:opacity .12s;}
+.chat-item:hover .acoes, .chat-item.confirmando .acoes{opacity:1;}
+.chat-item .icone-btn{padding:5px; border-radius:5px; color:var(--text-faint); display:flex;}
+.chat-item .icone-btn:hover{background:var(--bg-elevated-2); color:var(--text-primary);}
+.chat-item .icone-btn.excluir:hover{color:var(--danger); background:var(--danger-soft);}
+.chat-item.confirmando .icone-btn.excluir{color:var(--danger); background:var(--danger-soft); animation:pulso 1s infinite;}
+@keyframes pulso{0%,100%{box-shadow:0 0 0 0 rgba(255,95,109,.35);} 50%{box-shadow:0 0 0 4px rgba(255,95,109,0);}}
+
+.sidebar-footer{padding:12px 14px 14px; border-top:1px solid var(--border); font-family:var(--font-mono); font-size:10.8px; color:var(--text-faint); line-height:1.6;}
+.sidebar-footer b{color:var(--text-muted);}
+.sidebar-footer.offline{color:var(--danger);}
+
+/* ============================== MAIN / CHAT =============================== */
+.main{display:flex; flex-direction:column; min-width:0; position:relative;}
+.topbar{padding:14px 24px; border-bottom:1px solid var(--border-soft); display:flex; align-items:center; justify-content:space-between; gap:16px;}
+.topbar-title{font-family:var(--font-mono); font-size:13.5px; color:var(--text-muted); display:flex; align-items:center; gap:8px;}
+.topbar-title b{color:var(--text-primary); font-weight:600;}
+.status-conexao{font-family:var(--font-mono); font-size:11px; color:var(--text-faint); display:flex; align-items:center; gap:6px;}
+.status-conexao .dot{width:6px; height:6px; border-radius:50%; background:var(--accent);}
+.status-conexao.offline .dot{background:var(--danger);}
+.status-conexao.offline{color:var(--danger);}
+
+.chat-scroll{flex:1; overflow-y:auto; padding:28px 0 10px; scroll-behavior:smooth; outline:none;}
+.chat-scroll:focus-visible{box-shadow:inset 0 0 0 2px var(--accent-soft);}
+.chat-scroll::-webkit-scrollbar{width:14px;}
+.chat-scroll::-webkit-scrollbar-thumb{border-width:4px;}
+.chat-inner{max-width:780px; margin:0 auto; padding:0 24px; display:flex; flex-direction:column; gap:22px;}
+
+.tela-vazia{height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 24px; gap:18px;}
+.tela-vazia .glyph{font-family:var(--font-mono); font-size:38px; color:var(--accent); text-shadow:0 0 24px rgba(53,255,160,.35);}
+.tela-vazia h1{font-family:var(--font-mono); font-size:19px; letter-spacing:.3px; color:var(--text-primary);}
+.tela-vazia p{color:var(--text-muted); font-size:13.5px; max-width:440px; line-height:1.6;}
+.sugestoes{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:6px; width:100%; max-width:560px;}
+.sugestao{text-align:left; padding:12px 14px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-panel); font-size:12.5px; color:var(--text-muted); transition:border-color .15s, transform .15s;}
+.sugestao:hover{border-color:var(--accent-dim); color:var(--text-primary); transform:translateY(-1px);}
+.sugestao .dom{display:block; color:var(--accent); font-family:var(--font-mono); font-size:10.5px; margin-bottom:4px; text-transform:uppercase; letter-spacing:.5px;}
+
+.alerta-offline{background:var(--danger-soft); border:1px solid rgba(255,95,109,.3); color:var(--danger); font-family:var(--font-mono); font-size:12px; padding:10px 14px; border-radius:var(--radius); max-width:520px; line-height:1.6;}
+.alerta-offline code{background:rgba(0,0,0,.25); padding:1px 5px; border-radius:4px;}
+
+.msg{display:flex; gap:12px; align-items:flex-start;}
+.msg.usuario{flex-direction:row-reverse;}
+.avatar{width:30px; height:30px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:12px; font-weight:700; flex-shrink:0;}
+.msg.usuario .avatar{background:var(--bg-elevated-2); color:var(--text-primary); border:1px solid var(--border);}
+.msg.assistente .avatar{background:var(--accent-soft); color:var(--accent); border:1px solid rgba(53,255,160,.25);}
+.msg.erro .avatar{background:var(--danger-soft); color:var(--danger); border:1px solid rgba(255,95,109,.3);}
+
+.msg-conteudo{max-width:78%; display:flex; flex-direction:column; gap:6px;}
+.msg.usuario .msg-conteudo{align-items:flex-end;}
+.bolha{padding:11px 14px; border-radius:var(--radius); font-size:14.3px; line-height:1.62; white-space:pre-wrap; word-wrap:break-word;}
+.msg.usuario .bolha{background:var(--bg-elevated-2); border:1px solid var(--border); color:var(--text-primary); border-top-right-radius:3px;}
+.msg.assistente .bolha{background:var(--bg-panel); border:1px solid var(--border-soft); color:var(--text-primary); border-top-left-radius:3px;}
+.msg.erro .bolha{background:var(--danger-soft); border:1px solid rgba(255,95,109,.3); color:var(--danger); border-top-left-radius:3px;}
+
+.trilha{font-family:var(--font-mono); font-size:10.3px; color:var(--text-faint); display:flex; align-items:center; gap:5px; flex-wrap:wrap; padding:0 2px;}
+.trilha .seg{color:var(--text-muted);}
+.trilha .seg.especialista{color:var(--accent);}
+.trilha .sep{color:var(--text-faint);}
+
+.pipeline{display:flex; flex-direction:column; gap:8px; padding:12px 14px; border:1px solid var(--border-soft); border-radius:var(--radius); background:var(--bg-panel); border-top-left-radius:3px; min-width:280px;}
+.pipeline-etapas{display:flex; align-items:center; gap:0;}
+.pipeline-etapa{display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:10.6px; color:var(--text-faint); transition:color .25s;}
+.pipeline-etapa .marcador{width:6px; height:6px; border-radius:50%; background:var(--border); transition:background .25s, box-shadow .25s;}
+.pipeline-etapa.ativa{color:var(--accent);}
+.pipeline-etapa.ativa .marcador{background:var(--accent); box-shadow:0 0 8px var(--accent);}
+.pipeline-etapa.feita{color:var(--text-muted);}
+.pipeline-etapa.feita .marcador{background:var(--accent-dim);}
+.pipeline-linha{width:16px; height:1px; background:var(--border); flex-shrink:0;}
+.pipeline-legenda{font-family:var(--font-mono); font-size:10.6px; color:var(--text-muted);}
+
+.input-area{padding:14px 24px 20px; border-top:1px solid var(--border-soft); position:relative;}
+.input-inner{max-width:780px; margin:0 auto;}
+.input-box{display:flex; align-items:flex-end; gap:10px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:14px; padding:9px 9px 9px 16px; transition:border-color .15s;}
+.input-box:focus-within{border-color:var(--accent-dim);}
+textarea#campo-mensagem{flex:1; resize:none; background:none; border:none; color:var(--text-primary); font-family:var(--font-body); font-size:14.3px; line-height:1.5; max-height:200px; min-height:24px; padding:6px 0;}
+textarea#campo-mensagem::placeholder{color:var(--text-faint);}
+textarea#campo-mensagem:focus{outline:none;}
+.btn-enviar{width:34px; height:34px; border-radius:9px; background:var(--accent); color:#04140c; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:opacity .15s, transform .1s;}
+.btn-enviar:disabled{opacity:.3; cursor:not-allowed;}
+.btn-enviar:not(:disabled):hover{transform:scale(1.05);}
+.btn-enviar:not(:disabled):active{transform:scale(.94);}
+.btn-anexar{width:34px; height:34px; border-radius:9px; background:transparent; color:var(--text-muted); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s, color .15s;}
+.btn-anexar:hover{background:var(--bg-elevated-2); color:var(--accent);}
+.btn-anexar.enviando{color:var(--accent); animation:pulso-anexo 1s infinite;}
+@keyframes pulso-anexo{0%,100%{opacity:1;} 50%{opacity:.4;}}
+
+.popover-alimentar{
+  position:absolute; bottom:calc(100% + 10px); left:0; right:0;
+  max-width:780px; margin:0 auto;
+  background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius);
+  padding:14px 16px; box-shadow:0 8px 24px rgba(0,0,0,.4);
+  display:flex; flex-direction:column; gap:10px;
+  z-index:30;
+}
+.popover-alimentar .titulo{font-family:var(--font-mono); font-size:12px; color:var(--text-primary); display:flex; align-items:center; gap:8px;}
+.popover-alimentar .titulo b{color:var(--accent);}
+.popover-alimentar .arquivo-nome{font-family:var(--font-mono); font-size:11px; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.popover-alimentar select{
+  background:var(--bg-elevated-2); border:1px solid var(--border); color:var(--text-primary);
+  font-family:var(--font-mono); font-size:12.5px; padding:8px 10px; border-radius:var(--radius-sm);
+  width:100%;
+}
+.popover-alimentar .acoes-popover{display:flex; gap:8px; justify-content:flex-end;}
+.popover-alimentar button{font-family:var(--font-mono); font-size:12px; padding:7px 14px; border-radius:var(--radius-sm);}
+.popover-alimentar .btn-cancelar{color:var(--text-muted); border:1px solid var(--border);}
+.popover-alimentar .btn-cancelar:hover{color:var(--text-primary); border-color:var(--text-faint);}
+.popover-alimentar .btn-confirmar{background:var(--accent); color:#04140c; font-weight:600;}
+.popover-alimentar .btn-confirmar:disabled{opacity:.4; cursor:not-allowed;}
+
+.msg-sistema{align-self:center; display:flex; align-items:center; gap:7px; font-family:var(--font-mono); font-size:11.5px; color:var(--text-muted); background:var(--bg-panel); border:1px solid var(--border-soft); padding:7px 14px; border-radius:20px; max-width:90%; text-align:center;}
+.msg-sistema.erro{color:var(--danger); border-color:rgba(255,95,109,.25); background:var(--danger-soft);}
+.msg-sistema .clip{flex-shrink:0;}
+
+.btn-temas{display:flex; align-items:center; justify-content:center; gap:9px; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius); background:transparent; color:var(--text-muted); font-size:12.5px; font-family:var(--font-mono); transition:border-color .15s, color .15s, background .15s;}
+.btn-temas:hover{border-color:var(--accent-dim); color:var(--accent); background:var(--bg-elevated);}
+
+.modal-overlay{position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px;}
+.modal-overlay[hidden]{display:none;}
+.modal-temas{background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); width:100%; max-width:480px; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.5);}
+.modal-header{display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border-soft); font-family:var(--font-mono); font-size:13.5px; color:var(--text-primary);}
+.modal-header button{color:var(--text-faint); font-size:18px; line-height:1; padding:2px 6px; border-radius:5px;}
+.modal-header button:hover{color:var(--text-primary); background:var(--bg-elevated-2);}
+.modal-body{padding:16px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:18px;}
+.secao-temas .rotulo{font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:1px; color:var(--text-faint); margin-bottom:9px;}
+.grade-temas{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
+.cartao-tema{display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg-elevated); font-size:12px; color:var(--text-muted); text-align:left; position:relative;}
+.cartao-tema:hover{border-color:var(--accent-dim); color:var(--text-primary);}
+.cartao-tema.ativo{border-color:var(--accent); color:var(--accent); background:var(--accent-soft);}
+.cartao-tema .swatch{width:14px; height:14px; border-radius:50%; flex-shrink:0; border:1px solid rgba(255,255,255,.15);}
+.cartao-tema .nome{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.cartao-tema .excluir-tema{color:var(--text-faint); padding:2px; border-radius:4px; flex-shrink:0;}
+.cartao-tema .excluir-tema:hover{color:var(--danger); background:var(--danger-soft);}
+.vazio-custom{font-size:11.5px; color:var(--text-faint); font-style:italic; padding:4px 2px;}
+
+#form-novo-tema{display:flex; flex-direction:column; gap:10px;}
+#form-novo-tema input[type="text"]{background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-primary); font-family:var(--font-mono); font-size:12.5px; padding:8px 10px; border-radius:var(--radius-sm);}
+.cores-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
+.cores-grid label{display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--text-muted); font-family:var(--font-mono);}
+.cores-grid input[type="color"]{width:28px; height:28px; border:1px solid var(--border); border-radius:6px; background:none; padding:0; cursor:pointer; flex-shrink:0;}
+.btn-salvar-tema{background:var(--accent); color:#04140c; font-weight:600; font-family:var(--font-mono); font-size:12.5px; padding:9px; border-radius:var(--radius-sm); margin-top:4px;}
+.btn-salvar-tema:hover{opacity:.9;}
+
+.input-dica{text-align:center; font-family:var(--font-mono); font-size:10.3px; color:var(--text-faint); margin-top:9px;}
+.input-dica kbd{background:var(--bg-elevated-2); border:1px solid var(--border); border-radius:4px; padding:1px 5px; font-family:var(--font-mono); color:var(--text-muted);}
+
+.toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--bg-elevated-2); border:1px solid var(--border); color:var(--text-primary); font-family:var(--font-mono); font-size:12.5px; padding:10px 16px; border-radius:var(--radius); opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:50; display:flex; align-items:center; gap:8px;}
+.toast.visivel{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto;}
+.toast .ponto{width:6px; height:6px; border-radius:50%; background:var(--accent);}
+.toast.erro .ponto{background:var(--danger);}
+
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;}
+  .sidebar{position:fixed; z-index:40; left:0; top:0; bottom:0; width:270px; transform:translateX(-100%); transition:transform .2s;}
+  .sidebar.aberta{transform:translateX(0);}
+  .sugestoes{grid-template-columns:1fr;}
+  .msg-conteudo{max-width:88%;}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="brand"><span class="dot" id="dot-conexao"></span> SYTHERION <span class="ver">2.0</span></div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-novo-chat" id="btn-novo-chat" style="flex:1;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Novo chat
+        </button>
+        <button class="btn-temas" id="btn-temas">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="chat-list" id="lista-chats">
+      <div class="chat-list-label">Conversas</div>
+    </div>
+    <div class="sidebar-footer" id="rodape-sidebar">
+      <b>1</b> agente central · <b>4</b> auxiliares<br>
+      <b id="contador-especialistas">—</b> especialistas conectados<br>
+      <span id="versao-backend" style="opacity:.6">build —</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title">Conversa: <b id="titulo-chat-atual">nova conversa</b></div>
+      <div class="status-conexao" id="status-conexao"><span class="dot"></span> <span id="status-texto">conectando ao backend...</span></div>
+    </div>
+
+    <div class="chat-scroll" id="chat-scroll" tabindex="0">
+      <div class="chat-inner" id="chat-inner"></div>
+    </div>
+
+    <div class="input-area" id="input-area">
+      <div class="input-inner">
+        <div class="input-box">
+          <button class="btn-anexar" id="btn-anexar" title="Ensinar um especialista com um arquivo">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <input type="file" id="input-arquivo" accept=".txt,.md,.markdown,.json,.csv,.pdf,.docx" style="display:none">
+          <textarea id="campo-mensagem" rows="1" placeholder="Pergunte algo ao ecossistema Sytherion..."></textarea>
+          <button class="btn-enviar" id="btn-enviar" disabled title="Enviar (Enter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+        </div>
+        <div class="input-dica"><kbd>Enter</kbd> envia · <kbd>Shift</kbd>+<kbd>Enter</kbd> quebra linha · 📎 ensina um especialista com um arquivo</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"><span class="ponto"></span><span id="toast-texto">Conversa apagada</span></div>
+
+<div class="modal-overlay" id="modal-temas" hidden>
+  <div class="modal-temas">
+    <div class="modal-header">
+      <span>🎨 Temas</span>
+      <button id="fechar-temas" title="Fechar">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="secao-temas">
+        <div class="rotulo">Temas prontos</div>
+        <div class="grade-temas" id="grade-temas-embutidos"></div>
+      </div>
+      <div class="secao-temas">
+        <div class="rotulo">Seus mods</div>
+        <div class="grade-temas" id="grade-temas-custom"></div>
+      </div>
+      <div class="secao-temas">
+        <div class="rotulo">Criar novo mod</div>
+        <form id="form-novo-tema">
+          <input type="text" id="nome-novo-tema" placeholder="Nome do seu tema" required maxlength="30">
+          <div class="cores-grid">
+            <label>Destaque <input type="color" id="cor-accent" value="#35ffa0"></label>
+            <label>Fundo <input type="color" id="cor-bg-void" value="#07100d"></label>
+            <label>Painel <input type="color" id="cor-bg-panel" value="#0c1613"></label>
+            <label>Elevado <input type="color" id="cor-bg-elevado" value="#121e19"></label>
+            <label>Texto <input type="color" id="cor-texto" value="#eaf4ee"></label>
+            <label>Texto sec. <input type="color" id="cor-texto-muted" value="#7f9689"></label>
+            <label>Borda <input type="color" id="cor-borda" value="#1d2c26"></label>
+            <label>Alerta <input type="color" id="cor-perigo" value="#ff5f6d"></label>
+          </div>
+          <button type="submit" class="btn-salvar-tema">Salvar e aplicar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+ * Frontend — fala com o backend Python via fetch(), sem lógica própria de
+ * IA. ApiClient só sabe HTTP, ChatStore só guarda conversas, UIController
+ * só mexe no DOM.
+ * ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+ * 1) API CLIENT
+ * ------------------------------------------------------------------------- */
+class ApiClient {
+  constructor(baseUrl = "") {
+    this._base = baseUrl;
+  }
+
+  async status() {
+    const r = await fetch(`${this._base}/api/status`);
+    if (!r.ok) throw new Error("backend indisponível");
+    return r.json();
+  }
+
+  async listarAgentes() {
+    const r = await fetch(`${this._base}/api/agentes`);
+    if (!r.ok) throw new Error("falha ao listar agentes");
+    return r.json();
+  }
+
+  async conversar(pergunta, historico) {
+    const r = await fetch(`${this._base}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pergunta, historico }),
+    });
+    if (!r.ok) {
+      const erro = await r.json().catch(() => ({}));
+      throw new Error(erro.detail || `erro HTTP ${r.status}`);
+    }
+    return r.json(); // {resposta, especialista, dominio, confianca, trilha}
+  }
+
+  async alimentar(nomeIa, arquivo) {
+    const form = new FormData();
+    form.append("nome_ia", nomeIa);
+    form.append("arquivo", arquivo);
+    const r = await fetch(`${this._base}/api/alimentar`, { method: "POST", body: form });
+    if (!r.ok) {
+      const erro = await r.json().catch(() => ({}));
+      throw new Error(erro.detail || "falha ao alimentar IA");
+    }
+    return r.json();
+  }
+
+  async obterPreferencias() {
+    const r = await fetch(`${this._base}/api/preferencias`);
+    if (!r.ok) throw new Error("falha ao carregar preferências");
+    return r.json();
+  }
+
+  async definirTemaAtivo(nome) {
+    const r = await fetch(`${this._base}/api/preferencias/tema-ativo`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nome }),
+    });
+    if (!r.ok) throw new Error("falha ao definir tema ativo");
+    return r.json();
+  }
+
+  async salvarTemaCustomizado(nome, cores) {
+    const r = await fetch(`${this._base}/api/preferencias/tema-customizado`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nome, cores }),
+    });
+    if (!r.ok) throw new Error("falha ao salvar tema");
+    return r.json();
+  }
+
+  async excluirTemaCustomizado(nome) {
+    const r = await fetch(`${this._base}/api/preferencias/tema-customizado/${encodeURIComponent(nome)}`, {
+      method: "DELETE",
+    });
+    if (!r.ok) throw new Error("falha ao excluir tema");
+    return r.json();
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * 2) CHAT STORE — estado das conversas em memória
+ * ------------------------------------------------------------------------- */
+class ChatStore {
+  constructor() {
+    this._chats = [];
+    this._idAtual = null;
+  }
+  novoChat() {
+    const chat = { id: crypto.randomUUID(), titulo: "Nova conversa", mensagens: [], criadoEm: Date.now() };
+    this._chats.unshift(chat);
+    this._idAtual = chat.id;
+    return chat;
+  }
+  excluirChat(id) {
+    this._chats = this._chats.filter(c => c.id !== id);
+    if (this._idAtual === id) this._idAtual = this._chats[0]?.id ?? null;
+  }
+  obterAtual() { return this._chats.find(c => c.id === this._idAtual) || null; }
+  selecionar(id) { this._idAtual = id; }
+  listar() { return this._chats; }
+  adicionarMensagem(chatId, autor, texto, meta = {}) {
+    const chat = this._chats.find(c => c.id === chatId);
+    if (!chat) return;
+    chat.mensagens.push({ autor, texto, meta, ts: Date.now() });
+    if (chat.titulo === "Nova conversa" && autor === "usuario") {
+      chat.titulo = texto.slice(0, 42) + (texto.length > 42 ? "…" : "");
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * 2.5) GERENCIADOR DE TEMAS — aplica variáveis CSS e persiste via API
+ * ------------------------------------------------------------------------- */
+class GerenciadorTemas {
+  static TEMAS_EMBUTIDOS = {
+    matrix: {
+      nome: "Matrix (padrão)",
+      cores: {
+        "--accent": "#35ffa0", "--accent-dim": "#1f8f5e", "--bg-void": "#07100d",
+        "--bg-panel": "#0c1613", "--bg-elevated": "#121e19", "--bg-elevated-2": "#16241e",
+        "--text-primary": "#eaf4ee", "--text-muted": "#7f9689", "--border": "#1d2c26", "--danger": "#ff5f6d",
+      },
+    },
+    cyberpunk: {
+      nome: "Cyberpunk",
+      cores: {
+        "--accent": "#ff2bd6", "--accent-dim": "#a8158f", "--bg-void": "#0a0612",
+        "--bg-panel": "#140b1f", "--bg-elevated": "#1c1029", "--bg-elevated-2": "#241535",
+        "--text-primary": "#f5e9ff", "--text-muted": "#a189c4", "--border": "#2a1a3d", "--danger": "#ff4d4d",
+      },
+    },
+    meia_noite: {
+      nome: "Meia-noite",
+      cores: {
+        "--accent": "#4dd9ff", "--accent-dim": "#1c7fa3", "--bg-void": "#050814",
+        "--bg-panel": "#0b1120", "--bg-elevated": "#111a2e", "--bg-elevated-2": "#16223a",
+        "--text-primary": "#e6f1ff", "--text-muted": "#7d93b8", "--border": "#1a2740", "--danger": "#ff6b6b",
+      },
+    },
+    alto_contraste: {
+      nome: "Alto contraste",
+      cores: {
+        "--accent": "#ffee00", "--accent-dim": "#b3a600", "--bg-void": "#000000",
+        "--bg-panel": "#0a0a0a", "--bg-elevated": "#151515", "--bg-elevated-2": "#1f1f1f",
+        "--text-primary": "#ffffff", "--text-muted": "#c4c4c4", "--border": "#333333", "--danger": "#ff3b3b",
+      },
+    },
+  };
+
+  constructor(api) {
+    this._api = api;
+    this._temasCustomizados = {};
+    this._temaAtivo = "matrix";
+  }
+
+  async carregar() {
+    try {
+      const prefs = await this._api.obterPreferencias();
+      this._temasCustomizados = prefs.temas_customizados || {};
+      this._temaAtivo = prefs.tema_ativo || "matrix";
+    } catch {
+      this._temaAtivo = "matrix";
+    }
+    this.aplicar(this._temaAtivo);
+  }
+
+  listarEmbutidos() {
+    return Object.entries(GerenciadorTemas.TEMAS_EMBUTIDOS).map(([id, t]) => ({ id, nome: t.nome, cores: t.cores }));
+  }
+
+  listarCustomizados() {
+    return Object.entries(this._temasCustomizados).map(([id, cores]) => ({ id, nome: id, cores }));
+  }
+
+  _obterCores(id) {
+    if (GerenciadorTemas.TEMAS_EMBUTIDOS[id]) return GerenciadorTemas.TEMAS_EMBUTIDOS[id].cores;
+    return this._temasCustomizados[id] || null;
+  }
+
+  aplicar(id) {
+    const cores = this._obterCores(id);
+    if (!cores) return;
+    for (const [chave, valor] of Object.entries(cores)) {
+      document.documentElement.style.setProperty(chave, valor);
+    }
+    this._temaAtivo = id;
+  }
+
+  temaAtivo() {
+    return this._temaAtivo;
+  }
+
+  async selecionar(id) {
+    this.aplicar(id);
+    try {
+      await this._api.definirTemaAtivo(id);
+    } catch {
+      /* aplicado localmente mesmo que a persistência falhe (backend offline) */
+    }
+  }
+
+  async salvarCustomizado(nome, cores) {
+    this._temasCustomizados[nome] = cores;
+    this.aplicar(nome);
+    await this._api.salvarTemaCustomizado(nome, cores);
+  }
+
+  async excluirCustomizado(id) {
+    delete this._temasCustomizados[id];
+    if (this._temaAtivo === id) this.aplicar("matrix");
+    await this._api.excluirTemaCustomizado(id);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * 3) UI CONTROLLER — único lugar que toca o DOM
+ * ------------------------------------------------------------------------- */
+class UIController {
+  constructor(store, api, temas) {
+    this._store = store;
+    this._api = api;
+    this._temas = temas;
+    this._pendenteExclusao = null;
+    this._backendOnline = false;
+    this._totalEspecialistas = null;
+    this._forcarScrollProximo = true;
+
+    this._el = {
+      listaChats: document.getElementById("lista-chats"),
+      chatInner: document.getElementById("chat-inner"),
+      chatScroll: document.getElementById("chat-scroll"),
+      campo: document.getElementById("campo-mensagem"),
+      btnEnviar: document.getElementById("btn-enviar"),
+      btnNovoChat: document.getElementById("btn-novo-chat"),
+      btnAnexar: document.getElementById("btn-anexar"),
+      inputArquivo: document.getElementById("input-arquivo"),
+      inputArea: document.getElementById("input-area"),
+      tituloAtual: document.getElementById("titulo-chat-atual"),
+      contador: document.getElementById("contador-especialistas"),
+      rodapeSidebar: document.getElementById("rodape-sidebar"),
+      statusConexao: document.getElementById("status-conexao"),
+      statusTexto: document.getElementById("status-texto"),
+      dotConexao: document.getElementById("dot-conexao"),
+      toast: document.getElementById("toast"),
+      toastTexto: document.getElementById("toast-texto"),
+      btnTemas: document.getElementById("btn-temas"),
+      modalTemas: document.getElementById("modal-temas"),
+      fecharTemas: document.getElementById("fechar-temas"),
+      gradeEmbutidos: document.getElementById("grade-temas-embutidos"),
+      gradeCustom: document.getElementById("grade-temas-custom"),
+      formNovoTema: document.getElementById("form-novo-tema"),
+    };
+
+    this._agentesCache = null; // preenchido sob demanda ao abrir o popover de anexo
+
+    this._ligarEventos();
+  }
+
+  async iniciar() {
+    if (this._store.listar().length === 0) this._store.novoChat();
+    await this._verificarBackend();
+    this._renderTudo();
+  }
+
+  async _verificarBackend() {
+    try {
+      const status = await this._api.status();
+      this._backendOnline = true;
+      this._totalEspecialistas = status.especialistas;
+      this._el.contador.textContent = status.especialistas;
+      document.getElementById("versao-backend").textContent = "build " + (status.versao || "?");
+      this._el.statusTexto.textContent = "pipeline multiagente ativo";
+      this._el.statusConexao.classList.remove("offline");
+      this._el.dotConexao.classList.remove("offline");
+    } catch {
+      this._backendOnline = false;
+      this._el.statusTexto.textContent = "backend offline";
+      this._el.statusConexao.classList.add("offline");
+      this._el.dotConexao.classList.add("offline");
+      this._el.contador.textContent = "0";
+      this._el.rodapeSidebar.classList.add("offline");
+    }
+  }
+
+  _ligarEventos() {
+    this._el.btnNovoChat.addEventListener("click", () => {
+      this._store.novoChat();
+      this._forcarScrollProximo = true;
+      this._renderTudo();
+      this._el.campo.focus();
+    });
+
+    // Todas as teclas seguem o comportamento nativo do <textarea>. A única
+    // exceção é Enter sem Shift, que dispara o envio (Shift+Enter quebra linha).
+    this._el.campo.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        this._enviarMensagem();
+      }
+    });
+    this._el.campo.addEventListener("input", () => {
+      this._autoAjustarAltura();
+      this._el.btnEnviar.disabled = this._el.campo.value.trim().length === 0;
+    });
+    this._el.btnEnviar.addEventListener("click", () => this._enviarMensagem());
+
+    this._el.btnAnexar.addEventListener("click", () => {
+      if (!this._backendOnline) {
+        this._mostrarToast("Backend offline — não é possível ensinar um especialista agora.", "erro");
+        return;
+      }
+      this._el.inputArquivo.click();
+    });
+    this._el.inputArquivo.addEventListener("change", () => {
+      const arquivo = this._el.inputArquivo.files?.[0];
+      if (arquivo) this._abrirPopoverAlimentar(arquivo);
+    });
+
+    // Scroll do chat: touchpad e roda do mouse já funcionam nativamente
+    // (overflow-y:auto). Aqui só adicionamos navegação por teclado quando
+    // o painel de mensagens (não o campo de texto) está em foco.
+    this._el.chatScroll.addEventListener("keydown", (e) => {
+      const el = this._el.chatScroll;
+      const passos = {
+        ArrowDown: 70, ArrowUp: -70,
+        PageDown: el.clientHeight * 0.9, PageUp: -el.clientHeight * 0.9,
+      };
+      if (e.key in passos) {
+        e.preventDefault();
+        el.scrollTop += passos[e.key];
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        el.scrollTop = 0;
+      } else if (e.key === "End") {
+        e.preventDefault();
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+
+    this._el.btnTemas.addEventListener("click", () => this._abrirModalTemas());
+    this._el.fecharTemas.addEventListener("click", () => this._fecharModalTemas());
+    this._el.modalTemas.addEventListener("click", (e) => {
+      if (e.target === this._el.modalTemas) this._fecharModalTemas();
+    });
+    this._el.formNovoTema.addEventListener("submit", (e) => this._salvarNovoTema(e));
+  }
+
+  _autoAjustarAltura() {
+    const el = this._el.campo;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 200) + "px";
+  }
+
+  async _abrirPopoverAlimentar(arquivo) {
+    this._fecharPopoverAlimentar();
+
+    if (!this._agentesCache) {
+      try {
+        this._agentesCache = await this._api.listarAgentes();
+      } catch {
+        this._mostrarToast("Não consegui listar os especialistas.", "erro");
+        this._el.inputArquivo.value = "";
+        return;
+      }
+    }
+
+    const pop = document.createElement("div");
+    pop.className = "popover-alimentar";
+    pop.id = "popover-alimentar";
+    pop.innerHTML = `
+      <div class="titulo">📎 Ensinar especialista com <b>${this._escapar(arquivo.name)}</b></div>
+      <div class="arquivo-nome">${(arquivo.size / 1024).toFixed(1)} KB</div>
+      <select id="select-especialista">
+        ${this._agentesCache.map(a => `<option value="${this._escapar(a.nome)}">${this._escapar(a.nome)} — ${this._escapar(a.dominio)}</option>`).join("")}
+      </select>
+      <div class="acoes-popover">
+        <button class="btn-cancelar" id="btn-cancelar-alimentar">Cancelar</button>
+        <button class="btn-confirmar" id="btn-confirmar-alimentar">Ensinar</button>
+      </div>`;
+    this._el.inputArea.appendChild(pop);
+
+    document.getElementById("btn-cancelar-alimentar").addEventListener("click", () => {
+      this._fecharPopoverAlimentar();
+      this._el.inputArquivo.value = "";
+    });
+    document.getElementById("btn-confirmar-alimentar").addEventListener("click", async (e) => {
+      const nomeIa = document.getElementById("select-especialista").value;
+      const btnConfirmar = e.currentTarget;
+      btnConfirmar.disabled = true;
+      btnConfirmar.textContent = "Enviando...";
+      this._el.btnAnexar.classList.add("enviando");
+      try {
+        const resultado = await this._api.alimentar(nomeIa, arquivo);
+        this._registrarMensagemSistema(
+          `${nomeIa} absorveu ${resultado.itens_aprendidos ?? 0} novo(s) item(ns) de "${arquivo.name}"`
+        );
+      } catch (err) {
+        this._registrarMensagemSistema(`Falha ao ensinar ${nomeIa}: ${err.message}`, true);
+      } finally {
+        this._el.btnAnexar.classList.remove("enviando");
+        this._el.inputArquivo.value = "";
+        this._fecharPopoverAlimentar();
+      }
+    });
+  }
+
+  _fecharPopoverAlimentar() {
+    document.getElementById("popover-alimentar")?.remove();
+  }
+
+  _registrarMensagemSistema(texto, erro = false) {
+    let chat = this._store.obterAtual();
+    if (!chat) chat = this._store.novoChat();
+    this._store.adicionarMensagem(chat.id, "sistema", texto, { erro });
+    this._renderTudo();
+  }
+
+  /* ------------------------------------------------------------ temas ------ */
+  _abrirModalTemas() {
+    this._renderGradeTemas();
+    this._el.modalTemas.hidden = false;
+  }
+
+  _fecharModalTemas() {
+    this._el.modalTemas.hidden = true;
+  }
+
+  _renderGradeTemas() {
+    const ativo = this._temas.temaAtivo();
+
+    this._el.gradeEmbutidos.innerHTML = "";
+    for (const tema of this._temas.listarEmbutidos()) {
+      this._el.gradeEmbutidos.appendChild(this._criarCartaoTema(tema, ativo, false));
+    }
+
+    const customizados = this._temas.listarCustomizados();
+    this._el.gradeCustom.innerHTML = "";
+    if (customizados.length === 0) {
+      this._el.gradeCustom.innerHTML = `<div class="vazio-custom">Você ainda não criou nenhum mod.</div>`;
+    } else {
+      for (const tema of customizados) {
+        this._el.gradeCustom.appendChild(this._criarCartaoTema(tema, ativo, true));
+      }
+    }
+  }
+
+  _criarCartaoTema(tema, ativo, excluivel) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "cartao-tema" + (tema.id === ativo ? " ativo" : "");
+    card.innerHTML = `
+      <span class="swatch" style="background:${tema.cores["--accent"] || "#888"}"></span>
+      <span class="nome">${this._escapar(tema.nome)}</span>
+      ${excluivel ? `<span class="excluir-tema" title="Excluir mod">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>
+      </span>` : ""}`;
+    card.addEventListener("click", async (e) => {
+      if (e.target.closest(".excluir-tema")) {
+        e.stopPropagation();
+        await this._temas.excluirCustomizado(tema.id);
+        this._renderGradeTemas();
+        this._mostrarToast(`Mod "${tema.nome}" excluído`);
+        return;
+      }
+      await this._temas.selecionar(tema.id);
+      this._renderGradeTemas();
+    });
+    return card;
+  }
+
+  async _salvarNovoTema(e) {
+    e.preventDefault();
+    const nome = document.getElementById("nome-novo-tema").value.trim();
+    if (!nome) return;
+    const cores = {
+      "--accent": document.getElementById("cor-accent").value,
+      "--bg-void": document.getElementById("cor-bg-void").value,
+      "--bg-panel": document.getElementById("cor-bg-panel").value,
+      "--bg-elevated": document.getElementById("cor-bg-elevado").value,
+      "--text-primary": document.getElementById("cor-texto").value,
+      "--text-muted": document.getElementById("cor-texto-muted").value,
+      "--border": document.getElementById("cor-borda").value,
+      "--danger": document.getElementById("cor-perigo").value,
+    };
+    try {
+      await this._temas.salvarCustomizado(nome, cores);
+      this._renderGradeTemas();
+      this._mostrarToast(`Mod "${nome}" criado e aplicado`);
+      document.getElementById("nome-novo-tema").value = "";
+    } catch (err) {
+      this._mostrarToast(`Falha ao salvar tema: ${err.message}`, "erro");
+    }
+  }
+
+  async _enviarMensagem() {
+    const texto = this._el.campo.value.trim();
+    if (!texto) return;
+    let chat = this._store.obterAtual();
+    if (!chat) chat = this._store.novoChat();
+
+    this._store.adicionarMensagem(chat.id, "usuario", texto);
+    this._el.campo.value = "";
+    this._autoAjustarAltura();
+    this._el.btnEnviar.disabled = true;
+    this._forcarScrollProximo = true;
+    this._renderTudo();
+
+    const idPipeline = this._renderPipelinePensando();
+    const historicoParaApi = chat.mensagens
+      .filter(m => m.autor === "usuario" || m.autor === "assistente")
+      .map(m => ({ autor: m.autor, texto: m.texto }));
+
+    try {
+      const resultado = await this._api.conversar(texto, historicoParaApi);
+      document.getElementById(idPipeline)?.remove();
+      this._store.adicionarMensagem(chat.id, "assistente", resultado.resposta, {
+        especialista: resultado.especialista,
+        dominio: resultado.dominio,
+        trilha: resultado.trilha,
+        semEspecialista: resultado.dominio === "Roteamento",
+      });
+    } catch (err) {
+      document.getElementById(idPipeline)?.remove();
+      this._store.adicionarMensagem(chat.id, "erro",
+        `Não consegui falar com o backend (${err.message}). Verifique se o servidor está rodando:\n\ncd sytherion_2_0_projeto\nuvicorn sytherion.backend.api:app --reload\n\nDepois abra http://localhost:8000`);
+      this._backendOnline = false;
+      this._el.statusTexto.textContent = "backend offline";
+      this._el.statusConexao.classList.add("offline");
+      this._el.dotConexao.classList.add("offline");
+    }
+    this._renderTudo();
+  }
+
+  _renderPipelinePensando() {
+    const id = "pipeline-" + Date.now();
+    const etapas = ["Consultando backend", "Analisando intenção", "Especialista respondendo", "Contexto + refino", "Validando"];
+    const wrap = document.createElement("div");
+    wrap.className = "msg assistente";
+    wrap.id = id;
+    wrap.innerHTML = `
+      <div class="avatar">Σ</div>
+      <div class="msg-conteudo">
+        <div class="pipeline">
+          <div class="pipeline-etapas">
+            ${etapas.map((e, i) => `
+              <div class="pipeline-etapa" data-i="${i}"><span class="marcador"></span></div>
+              ${i < etapas.length - 1 ? '<div class="pipeline-linha"></div>' : ''}
+            `).join("")}
+          </div>
+          <div class="pipeline-legenda" id="${id}-legenda">${etapas[0]}...</div>
+        </div>
+      </div>`;
+    this._el.chatInner.appendChild(wrap);
+    this._scrollFundo();
+
+    let i = 0;
+    const legenda = document.getElementById(id + "-legenda");
+    const marcar = () => {
+      wrap.querySelectorAll(".pipeline-etapa").forEach((el, idx) => {
+        el.classList.toggle("ativa", idx === i);
+        el.classList.toggle("feita", idx < i);
+      });
+      if (legenda) legenda.textContent = etapas[i] + "...";
+    };
+    marcar();
+    const timer = setInterval(() => {
+      i = Math.min(i + 1, etapas.length - 1);
+      marcar();
+    }, 380);
+    wrap.dataset.timerId = timer;
+    return id;
+  }
+
+  _pedirExclusao(chatId, itemEl) {
+    if (this._pendenteExclusao === chatId) {
+      const chat = this._store.listar().find(c => c.id === chatId);
+      this._store.excluirChat(chatId);
+      this._pendenteExclusao = null;
+      if (this._store.listar().length === 0) this._store.novoChat();
+      this._renderTudo();
+      this._mostrarToast(`Conversa "${(chat?.titulo || "sem título").slice(0,30)}" apagada`);
+      return;
+    }
+    this._pendenteExclusao = chatId;
+    itemEl.classList.add("confirmando");
+    setTimeout(() => {
+      if (this._pendenteExclusao === chatId) {
+        this._pendenteExclusao = null;
+        itemEl.classList.remove("confirmando");
+      }
+    }, 2600);
+  }
+
+  _mostrarToast(msg, tipo = "ok") {
+    this._el.toastTexto.textContent = msg;
+    this._el.toast.classList.toggle("erro", tipo === "erro");
+    this._el.toast.classList.add("visivel");
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => this._el.toast.classList.remove("visivel"), 2400);
+  }
+
+  _renderTudo() {
+    this._renderSidebar();
+    this._renderChat();
+  }
+
+  _renderSidebar() {
+    const chats = this._store.listar();
+    const atual = this._store.obterAtual();
+    this._el.listaChats.innerHTML = `<div class="chat-list-label">Conversas</div>`;
+    for (const chat of chats) {
+      const item = document.createElement("div");
+      item.className = "chat-item" + (atual && chat.id === atual.id ? " ativo" : "");
+      item.innerHTML = `
+        <span class="titulo">${this._escapar(chat.titulo)}</span>
+        <div class="acoes">
+          <span class="icone-btn excluir" title="Apagar conversa">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>
+          </span>
+        </div>`;
+      item.addEventListener("click", (e) => {
+        if (e.target.closest(".excluir")) return;
+        this._store.selecionar(chat.id);
+        this._forcarScrollProximo = true;
+        this._renderTudo();
+      });
+      item.querySelector(".excluir").addEventListener("click", (e) => {
+        e.stopPropagation();
+        this._pedirExclusao(chat.id, item);
+      });
+      this._el.listaChats.appendChild(item);
+    }
+  }
+
+  _renderChat() {
+    const chat = this._store.obterAtual();
+    this._el.tituloAtual.textContent = chat ? chat.titulo : "nova conversa";
+    const pertoDoFundoAntes = this._estaPertoDoFundo();
+
+    if (!chat || chat.mensagens.length === 0) {
+      this._el.chatInner.innerHTML = `
+        <div class="tela-vazia">
+          <div class="glyph">Σ</div>
+          <h1>Sytherion 2.0</h1>
+          <p>1 Agente Central, 4 agentes auxiliares e ${this._totalEspecialistas ?? "40"} especialistas
+             em cibersegurança rodando em Python, prontos para identificar o assunto e responder
+             com o que aprenderam, em suas próprias palavras.</p>
+          ${!this._backendOnline ? `
+            <div class="alerta-offline">
+              Backend não conectado. No terminal, rode:<br>
+              <code>cd sytherion_2_0_projeto</code><br>
+              <code>uvicorn sytherion.backend.api:app --reload</code><br>
+              depois abra <code>http://localhost:8000</code>
+            </div>` : `
+          <div class="sugestoes">
+            ${this._sugestoes().map(s => `
+              <button class="sugestao" data-texto="${this._escapar(s.texto)}">
+                <span class="dom">${s.dominio}</span>${this._escapar(s.texto)}
+              </button>`).join("")}
+          </div>`}
+        </div>`;
+      this._el.chatInner.querySelectorAll(".sugestao").forEach(btn => {
+        btn.addEventListener("click", () => {
+          this._el.campo.value = btn.dataset.texto;
+          this._autoAjustarAltura();
+          this._el.btnEnviar.disabled = false;
+          this._enviarMensagem();
+        });
+      });
+      return;
+    }
+
+    this._el.chatInner.innerHTML = "";
+    for (const msg of chat.mensagens) {
+      if (msg.autor === "sistema") {
+        const pill = document.createElement("div");
+        pill.className = "msg-sistema" + (msg.meta.erro ? " erro" : "");
+        pill.innerHTML = `<span class="clip">${msg.meta.erro ? "⚠️" : "📎"}</span> ${this._escapar(msg.texto)}`;
+        this._el.chatInner.appendChild(pill);
+        continue;
+      }
+      if (msg.autor === "assistente" && msg.meta.semEspecialista) {
+        // Nenhum dos 40 especialistas teve conhecimento relacionado — em vez
+        // de um balão grande (que fica repetitivo quando isso acontece
+        // várias vezes seguidas), um aviso discreto, sem avatar nem trilha.
+        const pill = document.createElement("div");
+        pill.className = "msg-sistema";
+        pill.innerHTML = `<span class="clip">🤔</span> ${this._escapar(msg.texto)}`;
+        this._el.chatInner.appendChild(pill);
+        continue;
+      }
+      const linha = document.createElement("div");
+      const classe = msg.autor === "usuario" ? "usuario" : (msg.autor === "erro" ? "erro assistente" : "assistente");
+      linha.className = "msg " + classe;
+      if (msg.autor === "usuario") {
+        linha.innerHTML = `
+          <div class="avatar">Você</div>
+          <div class="msg-conteudo"><div class="bolha">${this._escapar(msg.texto)}</div></div>`;
+      } else if (msg.autor === "erro") {
+        linha.innerHTML = `
+          <div class="avatar">!</div>
+          <div class="msg-conteudo"><div class="bolha">${this._escapar(msg.texto)}</div></div>`;
+      } else {
+        const trilha = msg.meta.trilha || ["IA-Central", msg.meta.especialista];
+        linha.innerHTML = `
+          <div class="avatar">Σ</div>
+          <div class="msg-conteudo">
+            <div class="bolha">${this._escapar(msg.texto)}</div>
+            <div class="trilha">${trilha.map((seg, i) => `
+              ${i > 0 ? '<span class="sep">→</span>' : ''}<span class="seg${seg === msg.meta.especialista ? ' especialista' : ''}">${this._escapar(seg)}</span>
+            `).join("")}</div>
+          </div>`;
+      }
+      this._el.chatInner.appendChild(linha);
+    }
+    if (this._forcarScrollProximo || pertoDoFundoAntes) {
+      this._scrollFundo();
+    }
+    this._forcarScrollProximo = false;
+  }
+
+  _estaPertoDoFundo(limiar = 120) {
+    const el = this._el.chatScroll;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < limiar;
+  }
+
+  _sugestoes() {
+    return [
+      { dominio: "SQL Injection", texto: "Como funciona um ataque de SQL Injection?" },
+      { dominio: "Ransomware", texto: "Como me proteger de ransomware?" },
+      { dominio: "Zero Trust", texto: "O que é arquitetura Zero Trust?" },
+      { dominio: "OSINT", texto: "O que é OSINT?" },
+    ];
+  }
+
+  _scrollFundo() {
+    requestAnimationFrame(() => { this._el.chatScroll.scrollTop = this._el.chatScroll.scrollHeight; });
+  }
+
+  _escapar(txt) {
+    const d = document.createElement("div");
+    d.textContent = txt ?? "";
+    return d.innerHTML;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * 4) COMPOSITION ROOT
+ * ------------------------------------------------------------------------- */
+(function bootstrap() {
+  // Servido pela própria API FastAPI (mesma origem) -> string vazia funciona.
+  // Se aberto via file:// diretamente, aponta para localhost:8000 por padrão.
+  const API_BASE = window.location.protocol === "file:" ? "http://localhost:8000" : "";
+  const api = new ApiClient(API_BASE);
+  const store = new ChatStore();
+  const temas = new GerenciadorTemas(api);
+  const ui = new UIController(store, api, temas);
+  temas.carregar().finally(() => ui.iniciar());
+})();
+</script>
+</body>
+</html>
